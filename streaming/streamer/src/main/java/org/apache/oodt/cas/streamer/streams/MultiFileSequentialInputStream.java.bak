@@ -1,0 +1,115 @@
+package org.apache.oodt.cas.streamer.streams;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentSkipListMap;
+
+/**
+ * This stream reads multiple files in "lexographical" order and collapses
+ * them into one notional stream.  New files are added.  Old files removed.
+ * Files modified are changed, and the old stream is invalidated.
+ *
+ * @author starchmd
+ */
+public class MultiFileSequentialInputStream extends InputStream {
+
+    final ConcurrentSkipListMap<Path,InputStream> files = new ConcurrentSkipListMap<Path,InputStream>();
+    Thread watcher;
+
+    /**
+     * Constructs this class to work on a directory.
+     * @param dir - directory to read through emitting data.
+     * @throws IOException on failure to setup directory watcher.
+     */
+    public MultiFileSequentialInputStream(String dir) throws IOException {
+        watcher = new Thread(new DirectoryWatcher(Paths.get(dir)));
+        watcher.start();
+    }
+    //TODO: This could be made more efficient if we didn't completely depend on "read one byte".
+    @Override
+    public int read() throws IOException {
+        return this.getCurrentInputStream().read();
+    }
+    /**
+     * Iterates through the list and returns the next InputStream with available data.
+     * Will wait for data.
+     * @return - input stream
+     * @throws IOException thrown on exception in constituate input streams
+     */
+    private InputStream getCurrentInputStream() throws IOException {
+        synchronized (files) {
+            Iterator<InputStream> it = files.values().iterator();
+            while(it.hasNext()) {
+                InputStream is = null;
+                if ((is = it.next()).available() > 0)
+                    return is;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Watches directory and adds files to map in parent class.
+     * @author starchmd
+     */
+    private class DirectoryWatcher implements Runnable {
+        boolean stop = false;
+        WatchKey key;
+        WatchService watcher;
+
+        /**
+         * Watch the given path object for changes.
+         * @param dir - path representing directory to watch.
+         * @throws IOException thrown on problem.
+         */
+        public DirectoryWatcher(Path dir) throws IOException {
+            watcher = FileSystems.getDefault().newWatchService();
+            this.key = dir.register(watcher,StandardWatchEventKinds.ENTRY_CREATE,
+                                        StandardWatchEventKinds.ENTRY_DELETE,
+                                        StandardWatchEventKinds.ENTRY_MODIFY);
+        }
+        @Override
+        public void run() {
+            try {
+                //Loop until told to stop or exception kills you
+                while(!stop) {
+                    this.key = watcher.take();
+                    for (WatchEvent<?> event: key.pollEvents()) {
+                        WatchEvent.Kind<?> kind = event.kind();
+                        //Ignore overflow
+                        if (kind == StandardWatchEventKinds.OVERFLOW) {
+                            continue;
+                        }
+                        //Get paths from event
+                        @SuppressWarnings("unchecked")
+                        Path file = ((WatchEvent<Path>)event).context();
+                        InputStream is = Files.newInputStream(file, StandardOpenOption.READ);
+                        //Handle events
+                        if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                            MultiFileSequentialInputStream.this.files.put(file,is);
+                        } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                            MultiFileSequentialInputStream.this.files.remove(file);
+                        } else if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+                            MultiFileSequentialInputStream.this.files.replace(file, is);
+                        }
+                    }
+                    boolean valid = key.reset();
+                    if (!valid) {
+                        break;
+                    }
+                }
+            } catch(IOException ioe)
+            {} catch (InterruptedException ie) {}
+        }
+    }
+}
