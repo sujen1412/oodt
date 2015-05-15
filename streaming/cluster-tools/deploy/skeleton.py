@@ -25,10 +25,9 @@ def packages(packages, command=utilities.getPackMan()):
 
 def setup(mirror,url,temp="/tmp/downloads/"):
     '''
-    Performs necessary setup for Kafka deploy.
+    Performs necessary setup for deployment.
     @param mirror - Apache download mirror
-    @param kafka - Kafka version
-    @param scala - Scala Version
+    @param url -  tarball url
     @param temp - (Optional) Temp directory used for downloading
     '''
     tarball=url if not isinstance(url,types.GeneratorType) else url.next()
@@ -44,12 +43,6 @@ def setup(mirror,url,temp="/tmp/downloads/"):
         except StopIteration, ignore:
             raise e
     return destination
-
-def build(source,command,final):
-    '''
-    
-    '''
-    pass
 
 def deploy(local,remote):
     '''

@@ -9,6 +9,8 @@ import os
 # Local imports
 import utilities
 from skeleton import setup
+from skeleton import deploy
+
 
 def kafka(kafka,scala):
     '''
@@ -22,13 +24,11 @@ def kafka(kafka,scala):
          yield "/".join(["kafka",kafka,tarball])
          del versions[-1]
 
-def deploy():
-    pass
-
 def configure():
+    <do fabric stuff>
     pass
 
-def all():
+def main():
     '''
     Performs deployment of Kafka on all hosts
     '''
@@ -36,8 +36,9 @@ def all():
         print("Setting up for Kafka deployment")
         obj=setup(os.environ["APACHE_MIRROR"],kafka(os.environ["KAFKA_VERSION"],os.environ["SCALA_VERSION"]))
         deploy(obj,os.path.join(os.environ["INSTALL_DIR"],os.path.basename(obj))
+        configure()
     except Exception as e:
         print("Caught exception:",str(e))
 
 if __name__ == "__main__":
-    all()
+    main()
