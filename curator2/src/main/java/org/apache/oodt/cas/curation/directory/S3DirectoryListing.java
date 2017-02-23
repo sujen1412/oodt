@@ -17,7 +17,6 @@
 
 package org.apache.oodt.cas.curation.directory;
 
-import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
