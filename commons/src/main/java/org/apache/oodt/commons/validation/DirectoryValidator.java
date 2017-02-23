@@ -26,6 +26,6 @@ import java.util.Map;
  */
 public interface DirectoryValidator {
 
-  ValidationOutput validate(File f, Map<String,String> stagingpath);
+  ValidationOutput validate(Object f, Map<String,String> stagingpath);
 
 }

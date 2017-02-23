@@ -19,6 +19,7 @@ package org.apache.oodt.cas.curation.rest;
 import org.apache.oodt.cas.curation.configuration.Configuration;
 import org.apache.oodt.cas.curation.directory.Directory;
 import org.apache.oodt.cas.curation.directory.FileDirectory;
+import org.apache.oodt.cas.curation.directory.S3Directory;
 import org.apache.oodt.commons.validation.DirectoryValidator;
 
 import com.google.gson.Gson;
@@ -36,7 +37,7 @@ import javax.ws.rs.Produces;
 /**
  * A directory backend that returns JSON object representing a directory structure.
  * Will also list available directory backends.
- *  
+ *
  * @author starchmd
  */
 @Path("directory")
@@ -73,10 +74,16 @@ public class DirectoryBackend {
      */
     public String list(@PathParam("type") String type) throws Exception {
         //TODO: update this loading code to be user-configured and be fed off of "type"
-        if (types.get("files") == null)
+        if (type.equals("s3") && types.get("s3")== null) {
             bootstrapValidator();
-            types.put("files", new FileDirectory(Configuration.getWithReplacement(Configuration.STAGING_AREA_CONFIG),
-             validator));
+            types.put("s3", new S3Directory(null, validator, Configuration.AWS_BUCKET_CONFIG));
+        }
+        else if (type.equals("files") && types.get("files") == null) {
+            bootstrapValidator();
+            types.put("files", new FileDirectory(
+                Configuration.getWithReplacement(Configuration.STAGING_AREA_CONFIG),
+                validator));
+        }
         return gson.toJson(types.get(type).list());
     }
 
