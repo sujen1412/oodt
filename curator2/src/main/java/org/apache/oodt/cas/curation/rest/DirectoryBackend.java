@@ -73,18 +73,22 @@ public class DirectoryBackend {
      * @param type - type of directory to list
      */
     public String list(@PathParam("type") String type) throws Exception {
-        //TODO: update this loading code to be user-configured and be fed off of "type"
-        if (type.equals("s3") && types.get("s3")== null) {
-            bootstrapValidator();
-            types.put("s3", new S3Directory(null, validator, Configuration.AWS_BUCKET_CONFIG));
+      //TODO: update this loading code to be user-configured and be fed off of "type"
+      String filesystem = Configuration.getWithReplacement(Configuration.CAS_CURATOR_FILESYSTEM);
+      if (filesystem == null || filesystem.equals("localFS")) {
+        if (types.get("files") == null) {
+          bootstrapValidator();
+          types.put("files", new FileDirectory(
+              Configuration.getWithReplacement(Configuration.STAGING_AREA_CONFIG),
+              validator));
         }
-        else if (type.equals("files") && types.get("files") == null) {
-            bootstrapValidator();
-            types.put("files", new FileDirectory(
-                Configuration.getWithReplacement(Configuration.STAGING_AREA_CONFIG),
-                validator));
-        }
-        return gson.toJson(types.get(type).list());
+      }
+      else if (filesystem.equals("s3")) {
+        bootstrapValidator();
+        types.put("files", new S3Directory(null, validator,
+            Configuration.getWithReplacement(Configuration.AWS_BUCKET_CONFIG)));
+      }
+      return gson.toJson(types.get(type).list());
     }
 
   /**
