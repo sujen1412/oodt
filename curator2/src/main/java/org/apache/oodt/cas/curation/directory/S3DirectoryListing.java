@@ -27,11 +27,7 @@ import org.apache.oodt.commons.validation.DirectoryValidator;
 import org.apache.oodt.commons.validation.ValidationOutput;
 
 public class S3DirectoryListing implements DirectoryListing {
-  //Types of directory objects
-  public enum Type {
-    DIRECTORY,
-    OBJECT
-  }
+
   public static final String ROOT_NAME = "Root";
   //Attributes of node
   Type type;
@@ -92,6 +88,6 @@ public class S3DirectoryListing implements DirectoryListing {
         currentPath += "/";
       }
     }
-    return S3DirectoryMap.get(root.name);
+    return S3DirectoryMap.get("staging");
   }
 }
